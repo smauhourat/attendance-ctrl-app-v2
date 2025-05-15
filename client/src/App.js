@@ -77,6 +77,7 @@ function App() {
 
   const handleBackToList = () => {
     setSelectedEvent(null);
+
   };
 
   return (

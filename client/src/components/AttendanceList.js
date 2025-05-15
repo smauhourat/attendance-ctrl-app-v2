@@ -43,6 +43,7 @@ const AttendanceList = ({ event, onBack, isOnline }) => {
     }, [event.id, isOnline]);
 
     useEffect(() => {
+        // ojo, reponer el filtrado de asistentes
         // const filtered = attendees.filter(person =>
         //     person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         //     person.credentialNumber.includes(searchTerm) ||
