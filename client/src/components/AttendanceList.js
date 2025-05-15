@@ -28,6 +28,7 @@ const AttendanceList = ({ event, onBack, isOnline }) => {
                 } else {
                     console.log('llamo a getLocalEventWithAttendees()')
                     eventData = await getLocalEventWithAttendees(event.id);
+                    console.log('eventData =>', eventData)
                 }
 
                 setAttendees(eventData?.attendees || []);

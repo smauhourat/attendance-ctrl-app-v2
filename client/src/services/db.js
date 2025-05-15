@@ -127,17 +127,19 @@ export const getLocalEventWithAttendees = async (eventId) => {
 
     if (!event) return null;
 
-    const attendances = await getEventAttendances(eventId);
+    return event
 
-    return {
-        ...event,
-        attendees: event.attendees.map(attendee => {
-            const attendance = attendances.find(a => a.personId === attendee.id);
-            return {
-                ...attendee,
-                attended: !!attendance,
-                attendanceTime: attendance?.timestamp
-            };
-        })
-    };
+    // const attendances = await getEventAttendances(eventId);
+    // // aca ta el kilombo
+    // return {
+    //     ...event,
+    //     attendees: event.attendees.map(attendee => {
+    //         const attendance = attendances.find(a => a.personId === attendee.id);
+    //         return {
+    //             ...attendee,
+    //             attended: !!attendance,
+    //             attendanceTime: attendance?.timestamp
+    //         };
+    //     })
+    // };
 };
