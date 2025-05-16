@@ -19,8 +19,8 @@ export const syncPendingAttendances = async () => {
 };
 
 export const checkAndSync = async () => {
-    console.log('checkAndSync........')
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    console.log(`checkAndSync........${(new Date()).toLocaleTimeString() }`)
+    await new Promise(resolve => setTimeout(resolve, 2000));
     const pending = await getPendingAttendances();
     if (pending.length > 0) {
         return await syncPendingAttendances();

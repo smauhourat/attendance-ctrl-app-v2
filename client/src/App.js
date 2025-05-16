@@ -14,7 +14,37 @@ function App() {
   const isOnline = useNetworkStatus();
   const [lastSync, setLastSync] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [refreshAttendance, setRefreshAttendance] = useState()
 
+
+  const loadData2 = async () => {
+    try {
+      if (isOnline) {
+        setIsSyncing(true);
+        // Sync pending data first
+        const syncResult = await checkAndSync();
+        if (syncResult.success && syncResult.count > 0) {
+          console.log(`Sincronizados ${syncResult.count} registros`);
+        }
+
+        // Fetch fresh data
+        const serverEvents = await fetchEvents();
+        setEvents(serverEvents);
+
+        // Save to local DB
+        await saveEventsFromMongo(serverEvents)
+
+        setLastSync(new Date());
+      } else {
+        const localEvents = await getOpenEvents();
+        setEvents(localEvents);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };  
 
   // Sync periodically when online
   useEffect(() => {
@@ -22,10 +52,12 @@ function App() {
 
     if (isOnline) {
       interval = setInterval(() => {
-        setIsSyncing(true);
-        checkAndSync();
-        setLastSync(new Date());
-        setIsSyncing(false);
+        loadData2()
+        refreshAttendance(new Date())
+        // setIsSyncing(true);
+        // checkAndSync();
+        // setLastSync(new Date());
+        // setIsSyncing(false);
       }, 1 * 60 * 1000); // Sync every 1 minutes
     }
 
@@ -46,13 +78,10 @@ function App() {
           }
 
           // Fetch fresh data
-          // console.log('llama a fetchEvents')
           const serverEvents = await fetchEvents();
-          // console.log('serverEvents =>', serverEvents)
           setEvents(serverEvents);
 
           // Save to local DB
-          //await Promise.all(serverEvents.map(event => saveEvent(event)));
           await saveEventsFromMongo(serverEvents) 
 
           setLastSync(new Date());
@@ -66,7 +95,7 @@ function App() {
         setIsSyncing(false);
       }
     };
-    console.log(`Cargo Eventos porque cambio isOnline ${isOnline}`)
+    // console.log(`Cargo Eventos porque cambio isOnline ${isOnline}`)
 
     loadData();
   }, [isOnline]);
@@ -95,6 +124,7 @@ function App() {
             event={selectedEvent}
             onBack={handleBackToList}
             isOnline={isOnline}
+            refresh={refreshAttendance}
           />
         ) : (
           <EventList

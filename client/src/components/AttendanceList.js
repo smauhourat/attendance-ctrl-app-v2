@@ -4,7 +4,7 @@ import SearchBar from './SearchBar';
 import { markAttendance as markAttendanceApi, getEventAttendees as getEventWithAttendeesAPI } from '../services/api';
 import { saveAttendance, getLocalEventWithAttendees } from '../services/db';
 
-const AttendanceList = ({ event, onBack, isOnline }) => {
+const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
     const [attendees, setAttendees] = useState([]);
     const [filteredAttendees, setFilteredAttendees] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -22,8 +22,6 @@ const AttendanceList = ({ event, onBack, isOnline }) => {
                 let eventData;
 
                 if (isOnline) {
-                    // En producción, aquí harías una llamada a la API real
-                    //eventData = event;
                     eventData = await getEventWithAttendeesAPI(event.id);
                 } else {
                     console.log('llamo a getLocalEventWithAttendees()')
@@ -40,24 +38,19 @@ const AttendanceList = ({ event, onBack, isOnline }) => {
         };
 
         loadAttendees();
-    }, [event.id, isOnline]);
+    }, [event.id, isOnline, refresh]);
 
     useEffect(() => {
-        // ojo, reponer el filtrado de asistentes
-        // const filtered = attendees.filter(person =>
-        //     person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        //     person.credentialNumber.includes(searchTerm) ||
-        //     person.dni.includes(searchTerm) ||
-        //     person.email.toLowerCase().includes(searchTerm.toLowerCase())
-        // );
-        const filtered = attendees
-        console.log('llamo a setFilteredAttendees()')
-        console.log('filtered =>', filtered)
+        const filtered = attendees.filter(person =>
+            person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            person.credentialNumber.includes(searchTerm) ||
+            person.dni.includes(searchTerm) ||
+            person.email.toLowerCase().includes(searchTerm.toLowerCase())
+        );
         setFilteredAttendees(filtered);
     }, [searchTerm, attendees]);
 
     const handleMarkAttendance = async (personId) => {
-        console.log('personId =>', personId)
         const attendanceRecord = {
             eventId: event.id,
             personId,
