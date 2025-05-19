@@ -15,6 +15,11 @@ const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
     }, [event])
 
     useEffect(() => {
+        console.log('Se disparo refreshAttendance()')
+    }, [refresh])
+
+
+    useEffect(() => {
         
         const loadAttendees = async () => {
             setIsLoading(true);
@@ -22,7 +27,9 @@ const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
                 let eventData;
 
                 if (isOnline) {
+                    console.log('llamo getEventWithAttendeesAPI()')
                     eventData = await getEventWithAttendeesAPI(event.id);
+                    event = eventData.event;
                 } else {
                     console.log('llamo a getLocalEventWithAttendees()')
                     eventData = await getLocalEventWithAttendees(event.id);
@@ -73,6 +80,8 @@ const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
                     }
                     : person
             ));
+
+            console.log('attendees =>', attendees)
         } catch (error) {
             console.error('Error marking attendance:', error);
         }

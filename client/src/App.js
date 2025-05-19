@@ -43,6 +43,7 @@ function App() {
       console.error('Error loading data:', error);
     } finally {
       setIsSyncing(false);
+      setRefreshAttendance(new Date())
     }
   };  
 
@@ -52,8 +53,9 @@ function App() {
 
     if (isOnline) {
       interval = setInterval(() => {
+        console.log('llamo a loadData2() en App.js')
         loadData2()
-        refreshAttendance(new Date())
+        // setRefreshAttendance(new Date())
         // setIsSyncing(true);
         // checkAndSync();
         // setLastSync(new Date());
