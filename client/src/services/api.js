@@ -7,6 +7,14 @@
 
 const API_URL = 'http://localhost:5000/api'
 
+export const healthCheck = async () => {
+    const response = await fetch(`${API_URL}/health`);
+    if (!response.ok) {
+        throw new Error('Error checking API health');
+    }
+    return response.json();
+}
+
 export const fetchEvents = async () => {
     console.log(`llamo a fetchEvents(): ${API_URL}`)
     const response = await fetch(`${API_URL}/events/open`);

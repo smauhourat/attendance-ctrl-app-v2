@@ -9,7 +9,7 @@ const EventList = ({ events, onEventSelect }) => {
             <div className="events-container">
                 {events.map(event => (
                     <EventCard
-                        key={event._id}
+                        key={event.id}
                         event={event}
                         onClick={() => onEventSelect(event)}
                     />

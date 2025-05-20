@@ -12,4 +12,4 @@ ReactDOM.render(
 );
 
 // Registra el Service Worker para la funcionalidad PWA
-serviceWorkerRegistration.register();
+serviceWorkerRegistration.unregister();

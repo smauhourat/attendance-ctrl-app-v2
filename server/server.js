@@ -31,6 +31,10 @@ app.use(morgan('dev'));
 app.use('/api/events', require('./routes/events.routes'));
 app.use('/api/attendances', require('./routes/attendances.routes'));
 
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: Date.now() });
+});
+
 // En producción, servir los archivos estáticos de React
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../client/build')));
