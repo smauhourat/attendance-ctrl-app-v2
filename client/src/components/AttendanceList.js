@@ -3,6 +3,7 @@ import PersonCard from './PersonCard';
 import SearchBar from './SearchBar';
 import { markAttendance as markAttendanceApi, getEventAttendees as getEventWithAttendeesAPI } from '../services/api';
 import { saveAttendance, getLocalEventWithAttendees } from '../services/db';
+import { checkAndSync } from '../services/sync';
 
 const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
     const [attendees, setAttendees] = useState([]);
@@ -67,9 +68,10 @@ const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
         try {
             if (isOnline) {
                 await markAttendanceApi(attendanceRecord);
-            } else {                
-                await saveAttendance(attendanceRecord);
             }
+
+            await saveAttendance(attendanceRecord);
+            await checkAndSync()
 
             setAttendees(attendees.map(person =>
                 person.id === personId
