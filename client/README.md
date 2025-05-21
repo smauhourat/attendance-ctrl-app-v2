@@ -77,3 +77,9 @@ Añade parámetros de query para filtrar eventos o personas.
 - Añadir notificaciones por email
 - Implementar WebSockets para actualizaciones en tiempo real
 - Esta implementación proporciona una base sólida para tu sistema de control de asistencia con MongoDB, lista para integrarse con tu aplicación PWA React.
+
+
+
+TODO
+
+// 20/05/2025 no esta actualizando el estado a onLine cuando vuelve la API

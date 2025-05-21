@@ -67,9 +67,9 @@ const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
         try {
             if (isOnline) {
                 await markAttendanceApi(attendanceRecord);
+            } else {                
+                await saveAttendance(attendanceRecord);
             }
-
-            await saveAttendance(attendanceRecord);
 
             setAttendees(attendees.map(person =>
                 person.id === personId

@@ -114,6 +114,14 @@ function App() {
   const refreshEvents = useCallback(async () => {
     const eventsData = await getEvents();
     setEvents(eventsData);
+    // Save to local DB
+    await saveEventsFromMongo(eventsData)
+
+  }, []);
+
+  const syncAttendances = useCallback(async () => {
+    await checkAndSync();
+    setLastSync(new Date());
   }, []);
 
   // Sync periodically when online
@@ -123,12 +131,9 @@ function App() {
     if (isOnline) {
       interval = setInterval(() => {
         console.log('trigger interval check');
-
         setIsSyncing(true);
-        console.log('call to sync attenadancees')
-        console.log('call to refreshEvents')
+        syncAttendances();
         refreshEvents();
-        setLastSync(new Date());
         setIsSyncing(false)
       }, 1 * 60 * 1000); // Sync every 1 minutes
     }
