@@ -23,10 +23,11 @@ export const getEvents = async () => {
 
 export const markAttendance = async (attendance) => {
     try {
+        console.log('attendance', attendance)
         const response = await markAttendanceAPI(attendance);
-
+        
         if (!response.ok) {
-            throw new Error('Error marking attendance');
+            throw new Error('Error marking attendance 2');
         }
 
         return response.json();

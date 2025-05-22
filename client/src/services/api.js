@@ -44,11 +44,13 @@ export const markAttendance = async (attendance) => {
         }),
     });
 
+    // console.log('response', response)
+
     if (!response.ok) {
-        throw new Error('Error marking attendance');
+        throw new Error('Error marking attendance 1');
     }
 
-    return response.json();
+    return response; //.json();
 };
 
 export const syncAttendances = async (pendingAttendances) => {

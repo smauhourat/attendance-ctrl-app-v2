@@ -1,63 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PersonCard from './PersonCard';
 import SearchBar from './SearchBar';
-import { markAttendance as markAttendanceApi, getEventAttendees as getEventWithAttendeesAPI } from '../services/api';
-import { saveAttendance, getLocalEventWithAttendees } from '../services/db';
-import { checkAndSync } from '../services/sync';
+import { getEventAttendees as getEventWithAttendeesAPI } from '../services/api';
+import { getLocalEventWithAttendees } from '../services/db';
 import { markAttendance } from '../services/gateway';
 
-const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
+const AttendanceList = ({ event, onBack, isOnline, refreshTrigger, onAttendanceChange }) => {
     const [attendees, setAttendees] = useState([]);
-    const [filteredAttendees, setFilteredAttendees] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    useEffect (() => {
-        console.log(`event in AttendanceList (online: ${isOnline}) =>`, event)
-    }, [event])
+    // Función para cargar asistentes
+    const loadAttendees = async () => {
+        setIsLoading(true);
+        setError(null);
 
-    useEffect(() => {
-        console.log('Se disparo refreshAttendance()')
-    }, [refresh])
+        try {
+            let eventData;
 
-
-    useEffect(() => {
-        
-        const loadAttendees = async () => {
-            setIsLoading(true);
-            try {
-                let eventData;
-
-                if (isOnline) {
-                    console.log('llamo getEventWithAttendeesAPI()')
-                    eventData = await getEventWithAttendeesAPI(event.id);
-                    event = eventData.event;
-                } else {
-                    console.log('llamo a getLocalEventWithAttendees()')
-                    eventData = await getLocalEventWithAttendees(event.id);
-                    console.log('eventData =>', eventData)
-                }
-
-                setAttendees(eventData?.attendees || []);
-            } catch (error) {
-                console.error('Error loading attendees:', error);
-            } finally {
-                setIsLoading(false);
+            if (isOnline) {
+                console.log('Loading attendees from server...');
+                eventData = await getEventWithAttendeesAPI(event.id);
+            } else {
+                console.log('Loading attendees from local DB...');
+                eventData = await getLocalEventWithAttendees(event.id);
             }
-        };
 
-        loadAttendees();
-    }, [event.id, isOnline, refresh]);
+            setAttendees(eventData?.attendees || []);
+        } catch (error) {
+            console.error('Error loading attendees:', error);
+            setError('Error al cargar los asistentes. Por favor, intenta nuevamente.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
+    // Cargar asistentes cuando cambie el evento, estado de red o refresh trigger
     useEffect(() => {
-        const filtered = attendees.filter(person =>
-            person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        if (event?.id) {
+            loadAttendees();
+        }
+    }, [event.id, isOnline, refreshTrigger]);
+
+    // Filtrar asistentes basado en el término de búsqueda
+    const filteredAttendees = useMemo(() => {
+        if (!searchTerm.trim()) return attendees;
+
+        const searchLower = searchTerm.toLowerCase();
+        return attendees.filter(person =>
+            person.name.toLowerCase().includes(searchLower) ||
             person.credentialNumber.includes(searchTerm) ||
             person.dni.includes(searchTerm) ||
-            person.email.toLowerCase().includes(searchTerm.toLowerCase())
+            person.email.toLowerCase().includes(searchLower)
         );
-        setFilteredAttendees(filtered);
     }, [searchTerm, attendees]);
+
+    // Estadísticas de asistencia
+    const attendanceStats = useMemo(() => {
+        const total = attendees.length;
+        const attended = attendees.filter(a => a.attended).length;
+        return { total, attended };
+    }, [attendees]);
 
     const handleMarkAttendance = async (personId) => {
         const attendanceRecord = {
@@ -66,48 +70,73 @@ const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
             timestamp: new Date().toISOString()
         };
 
-        //21/05/2025: 
-        // Aca deberia intentar marcar la asistencia en el servidor, si no puede la guarda en la base de datos local
-        // y luego la sincroniza cuando vuelva a estar online
+        try {
+            // Actualizar UI inmediatamente (optimistic update)
+            setAttendees(prevAttendees =>
+                prevAttendees.map(person =>
+                    person.id === personId
+                        ? {
+                            ...person,
+                            attended: true,
+                            attendanceTime: attendanceRecord.timestamp
+                        }
+                        : person
+                )
+            );
 
-        await markAttendance(attendanceRecord);
+            // Intentar marcar asistencia (maneja online/offline internamente)
+            await markAttendance(attendanceRecord);
 
-        setAttendees(attendees.map(person =>
-            person.id === personId
-                ? {
-                    ...person,
-                    attended: true,
-                    attendanceTime: attendanceRecord.timestamp
-                }
-                : person
-        ));
-        
-        // try {
-        //     if (isOnline) {
-        //         await markAttendanceApi(attendanceRecord);
-        //     }
+            // Notificar al componente padre que hubo un cambio en asistencia
+            if (onAttendanceChange) {
+                onAttendanceChange();
+            }            
 
-        //     await saveAttendance(attendanceRecord);
-        //     await checkAndSync()
+        } catch (error) {
+            console.error('Error marking attendance:', error);
 
-        //     setAttendees(attendees.map(person =>
-        //         person.id === personId
-        //             ? {
-        //                 ...person,
-        //                 attended: true,
-        //                 attendanceTime: attendanceRecord.timestamp
-        //             }
-        //             : person
-        //     ));
+            // Revertir cambio optimista en caso de error
+            setAttendees(prevAttendees =>
+                prevAttendees.map(person =>
+                    person.id === personId
+                        ? {
+                            ...person,
+                            attended: false,
+                            attendanceTime: null
+                        }
+                        : person
+                )
+            );
 
-        //     console.log('attendees =>', attendees)
-        // } catch (error) {
-        //     console.error('Error marking attendance:', error);
-        // }
+            setError('Error al marcar asistencia. Por favor, intenta nuevamente.');
+        }
     };
 
     if (isLoading) {
-        return <div className="loading">Cargando asistentes...</div>;
+        return (
+            <div className="attendance-list">
+                <button className="back-button" onClick={onBack}>
+                    &larr; Volver a Eventos
+                </button>
+                <div className="loading">Cargando asistentes...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="attendance-list">
+                <button className="back-button" onClick={onBack}>
+                    &larr; Volver a Eventos
+                </button>
+                <div className="error">
+                    <p>{error}</p>
+                    <button onClick={loadAttendees} className="retry-button">
+                        Reintentar
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -115,15 +144,28 @@ const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
             <button className="back-button" onClick={onBack}>
                 &larr; Volver a Eventos
             </button>
-            <h1>Registro de Asistencia</h1>
-            <h2>{event.name}</h2>
 
-            <SearchBar value={searchTerm} onChange={setSearchTerm} />
+            <div className="header">
+                <h1>Registro de Asistencia</h1>
+                <h2>{event.name}</h2>
+                {!isOnline && (
+                    <div className="offline-notice">
+                        Modo offline - Los cambios se sincronizarán cuando vuelvas a estar online
+                    </div>
+                )}
+            </div>
+
+            <SearchBar
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Buscar por nombre, DNI, credencial o email..."
+            />
 
             <div className="stats">
                 <p>
-                    Total: {attendees.length} |
-                    Asistentes: {attendees.filter(a => a.attended).length}
+                    Total: {attendanceStats.total} |
+                    Asistentes: {attendanceStats.attended} |
+                    Pendientes: {attendanceStats.total - attendanceStats.attended}
                 </p>
             </div>
 
@@ -131,13 +173,18 @@ const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
                 {filteredAttendees.length > 0 ? (
                     filteredAttendees.map(person => (
                         <PersonCard
-                            key={person._id}
+                            key={person._id || person.id}
                             person={person}
                             onMarkAttendance={handleMarkAttendance}
                         />
                     ))
                 ) : (
-                    <p className="no-results">No se encontraron resultados</p>
+                    <div className="no-results">
+                        {searchTerm ?
+                            `No se encontraron resultados para "${searchTerm}"` :
+                            'No hay asistentes registrados para este evento'
+                        }
+                    </div>
                 )}
             </div>
         </div>

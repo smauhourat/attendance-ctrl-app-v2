@@ -2,106 +2,80 @@ import React, { useState, useEffect, useCallback } from 'react';
 import EventList from './components/EventList';
 import AttendanceList from './components/AttendanceList';
 import SyncStatus from './components/SyncStatus';
-import { getOpenEvents, saveEvent, saveEventsFromMongo } from './services/db';
-import { fetchEvents } from './services/api';
+import { getEvents } from './services/gateway';
 import { checkAndSync } from './services/sync';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import './styles/App.css';
-import { getEvents } from './services/gateway';
 
 function App() {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const { isOnline } = useNetworkStatus();
   const [lastSync, setLastSync] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [refreshAttendance, setRefreshAttendance] = useState()
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  const { isOnline } = useNetworkStatus();
 
-  const loadData2 = async () => {
+  // Función principal para actualizar eventos
+  const refreshEvents = useCallback(async () => {
     try {
-      if (isOnline) {
-        setIsSyncing(true);
-        // Sync pending data first
-        const syncResult = await checkAndSync();
-        if (syncResult.success && syncResult.count > 0) {
-          console.log(`Sincronizados ${syncResult.count} registros`);
-        }
-
-        // Fetch fresh data
-        const serverEvents = await fetchEvents();
-        setEvents(serverEvents);
-
-        // Save to local DB
-        await saveEventsFromMongo(serverEvents)
-
-        setLastSync(new Date());
-      } else {
-        const localEvents = await getOpenEvents();
-        setEvents(localEvents);
-      }
+      setIsSyncing(true);
+      const eventsData = await getEvents();
+      setEvents(eventsData);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading events:', error);
     } finally {
       setIsSyncing(false);
-      setRefreshAttendance(new Date())
     }
-  };  
+  }, []);
 
-  // Sync periodically when online
-  // useEffect(() => {
-  //   let interval;
+  // Función para sincronizar datos pendientes
+  const syncData = useCallback(async () => {
+    try {
+      const syncResult = await checkAndSync();
+      if (syncResult.success && syncResult.count > 0) {
+        console.log(`Sincronizados ${syncResult.count} registros`);
+      }
+      setLastSync(new Date());
+      return syncResult;
+    } catch (error) {
+      console.error('Error syncing data:', error);
+      return { success: false, count: 0 };
+    }
+  }, []);
 
-  //   if (isOnline) {
-  //     interval = setInterval(() => {
-  //       console.log('llamo a loadData2() en App.js')
-  //       loadData2()
-  //       // setRefreshAttendance(new Date())
-  //       // setIsSyncing(true);
-  //       // checkAndSync();
-  //       // setLastSync(new Date());
-  //       // setIsSyncing(false);
-  //     }, 1 * 60 * 1000); // Sync every 1 minutes
-  //   }
+  // Función completa de carga: sync + refresh
+  const loadAndSync = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      // Primero sincronizamos datos pendientes
+      await syncData();
+      // Luego cargamos eventos actualizados
+      await refreshEvents();
+      // Disparamos refresh para componentes hijos
+      setRefreshTrigger(prev => prev + 1);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [syncData, refreshEvents]);
 
-  //   return () => {
-  //     if (interval) clearInterval(interval);
-  //   };
-  // }, [isOnline]);
+  // Cargar datos inicial y cuando cambia el estado de red
+  useEffect(() => {
+    console.log(`Network status changed: ${isOnline ? 'online' : 'offline'}`);
+    loadAndSync();
+  }, [isOnline, loadAndSync]);
 
-  // useEffect(() => {
-  //   const loadData = async () => {
-  //     try {
-  //       if (isOnline) {
-  //         setIsSyncing(true);
-  //         // Sync pending data first
-  //         const syncResult = await checkAndSync();
-  //         if (syncResult.success && syncResult.count > 0) {
-  //           console.log(`Sincronizados ${syncResult.count} registros`);
-  //         }
+  // Sincronización periódica cuando está online
+  useEffect(() => {
+    if (!isOnline) return;
 
-  //         // Fetch fresh data
-  //         const serverEvents = await fetchEvents();
-  //         setEvents(serverEvents);
+    const interval = setInterval(() => {
+      console.log('Periodic sync triggered');
+      loadAndSync();
+    }, 60 * 1000); // Cada 1 minuto
 
-  //         // Save to local DB
-  //         await saveEventsFromMongo(serverEvents) 
-
-  //         setLastSync(new Date());
-  //       } else {
-  //         const localEvents = await getOpenEvents();
-  //         setEvents(localEvents);
-  //       }
-  //     } catch (error) {
-  //       console.error('Error loading data:', error);
-  //     } finally {
-  //       setIsSyncing(false);
-  //     }
-  //   };
-  //   // console.log(`Cargo Eventos porque cambio isOnline ${isOnline}`)
-
-  //   loadData();
-  // }, [isOnline]);
+    return () => clearInterval(interval);
+  }, [isOnline, loadAndSync]);
 
   const handleEventSelect = (event) => {
     setSelectedEvent(event);
@@ -109,59 +83,32 @@ function App() {
 
   const handleBackToList = () => {
     setSelectedEvent(null);
+    refreshEvents();
   };
 
-  const refreshEvents = useCallback(async () => {
-    const eventsData = await getEvents();
-    setEvents(eventsData);
-  }, []);
-
-  const syncAttendances = useCallback(async () => {
-    await checkAndSync();
-    setLastSync(new Date());
-  }, []);
-
-  // Sync periodically when online
-  useEffect(() => {
-    let interval;
-
-    if (isOnline) {
-      interval = setInterval(() => {
-        console.log('trigger interval check');
-        setIsSyncing(true);
-        syncAttendances();
-        refreshEvents();
-        setRefreshAttendance(new Date())
-        setIsSyncing(false)
-      }, 1 * 60 * 1000); // Sync every 1 minutes
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isOnline]);
-
-  useEffect(() => {
-    console.log(`isOnline cambió a ${isOnline}`);
-    refreshEvents();
-  }, [isOnline, refreshEvents])
+  const handleAttendanceChange = () => {
+    // Disparar refresh para sincronizar datos después de marcar asistencia
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   return (
     <div className="app">
       <header>
         <h1>Control de Asistencia</h1>
         <SyncStatus isOnline={isOnline} lastSync={lastSync} />
-        {isSyncing && <div className="syncing-notice">Sincronizando datos...</div>}
+        {isSyncing && (
+          <div className="syncing-notice">Sincronizando datos...</div>
+        )}
       </header>
 
       <main>
-
         {selectedEvent ? (
           <AttendanceList
             event={selectedEvent}
             onBack={handleBackToList}
             isOnline={isOnline}
-            refresh={refreshAttendance}
+            refreshTrigger={refreshTrigger}
+            onAttendanceChange={handleAttendanceChange}
           />
         ) : (
           <EventList
