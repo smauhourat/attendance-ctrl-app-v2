@@ -114,9 +114,6 @@ function App() {
   const refreshEvents = useCallback(async () => {
     const eventsData = await getEvents();
     setEvents(eventsData);
-    // Save to local DB
-    await saveEventsFromMongo(eventsData)
-
   }, []);
 
   const syncAttendances = useCallback(async () => {
@@ -134,6 +131,7 @@ function App() {
         setIsSyncing(true);
         syncAttendances();
         refreshEvents();
+        setRefreshAttendance(new Date())
         setIsSyncing(false)
       }, 1 * 60 * 1000); // Sync every 1 minutes
     }

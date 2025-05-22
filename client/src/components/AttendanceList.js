@@ -4,6 +4,7 @@ import SearchBar from './SearchBar';
 import { markAttendance as markAttendanceApi, getEventAttendees as getEventWithAttendeesAPI } from '../services/api';
 import { saveAttendance, getLocalEventWithAttendees } from '../services/db';
 import { checkAndSync } from '../services/sync';
+import { markAttendance } from '../services/gateway';
 
 const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
     const [attendees, setAttendees] = useState([]);
@@ -65,28 +66,44 @@ const AttendanceList = ({ event, onBack, isOnline, refresh }) => {
             timestamp: new Date().toISOString()
         };
 
-        try {
-            if (isOnline) {
-                await markAttendanceApi(attendanceRecord);
-            }
+        //21/05/2025: 
+        // Aca deberia intentar marcar la asistencia en el servidor, si no puede la guarda en la base de datos local
+        // y luego la sincroniza cuando vuelva a estar online
 
-            await saveAttendance(attendanceRecord);
-            await checkAndSync()
+        await markAttendance(attendanceRecord);
 
-            setAttendees(attendees.map(person =>
-                person.id === personId
-                    ? {
-                        ...person,
-                        attended: true,
-                        attendanceTime: attendanceRecord.timestamp
-                    }
-                    : person
-            ));
+        setAttendees(attendees.map(person =>
+            person.id === personId
+                ? {
+                    ...person,
+                    attended: true,
+                    attendanceTime: attendanceRecord.timestamp
+                }
+                : person
+        ));
+        
+        // try {
+        //     if (isOnline) {
+        //         await markAttendanceApi(attendanceRecord);
+        //     }
 
-            console.log('attendees =>', attendees)
-        } catch (error) {
-            console.error('Error marking attendance:', error);
-        }
+        //     await saveAttendance(attendanceRecord);
+        //     await checkAndSync()
+
+        //     setAttendees(attendees.map(person =>
+        //         person.id === personId
+        //             ? {
+        //                 ...person,
+        //                 attended: true,
+        //                 attendanceTime: attendanceRecord.timestamp
+        //             }
+        //             : person
+        //     ));
+
+        //     console.log('attendees =>', attendees)
+        // } catch (error) {
+        //     console.error('Error marking attendance:', error);
+        // }
     };
 
     if (isLoading) {
