@@ -32,7 +32,7 @@ export const useNetworkStatus = (interval = 10000) => {
                 setIsApiOnline(status === 'ok');
             } catch {
                 setIsApiOnline(false);
-                setIsOnline(false)
+                //setIsOnline(false)
                 console.log('API is offline');
             }
         };

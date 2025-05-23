@@ -14,7 +14,7 @@ function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, isApiOnline } = useNetworkStatus();
 
   // Función principal para actualizar eventos
   const refreshEvents = useCallback(async () => {
@@ -63,11 +63,11 @@ function App() {
   useEffect(() => {
     console.log(`Network status changed: ${isOnline ? 'online' : 'offline'}`);
     loadAndSync();
-  }, [isOnline, loadAndSync]);
+  }, [isOnline, isApiOnline, loadAndSync]);
 
   // Sincronización periódica cuando está online
   useEffect(() => {
-    if (!isOnline) return;
+    if (!isOnline || !isApiOnline) return;
 
     const interval = setInterval(() => {
       console.log('Periodic sync triggered');
@@ -75,7 +75,7 @@ function App() {
     }, 60 * 1000); // Cada 1 minuto
 
     return () => clearInterval(interval);
-  }, [isOnline, loadAndSync]);
+  }, [isOnline, isApiOnline, loadAndSync]);
 
   const handleEventSelect = (event) => {
     setSelectedEvent(event);
@@ -88,6 +88,7 @@ function App() {
 
   const handleAttendanceChange = () => {
     // Disparar refresh para sincronizar datos después de marcar asistencia
+    loadAndSync();
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -95,7 +96,7 @@ function App() {
     <div className="app">
       <header>
         <h1>Control de Asistencia</h1>
-        <SyncStatus isOnline={isOnline} lastSync={lastSync} />
+        <SyncStatus isOnline={isOnline && isApiOnline} lastSync={lastSync} />
         {isSyncing && (
           <div className="syncing-notice">Sincronizando datos...</div>
         )}
@@ -107,6 +108,7 @@ function App() {
             event={selectedEvent}
             onBack={handleBackToList}
             isOnline={isOnline}
+            isApiOnline={isApiOnline}
             refreshTrigger={refreshTrigger}
             onAttendanceChange={handleAttendanceChange}
           />

@@ -5,7 +5,7 @@ import { getEventAttendees as getEventWithAttendeesAPI } from '../services/api';
 import { getLocalEventWithAttendees } from '../services/db';
 import { markAttendance } from '../services/gateway';
 
-const AttendanceList = ({ event, onBack, isOnline, refreshTrigger, onAttendanceChange }) => {
+const AttendanceList = ({ event, onBack, isOnline, isApiOnline, refreshTrigger, onAttendanceChange }) => {
     const [attendees, setAttendees] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -19,7 +19,7 @@ const AttendanceList = ({ event, onBack, isOnline, refreshTrigger, onAttendanceC
         try {
             let eventData;
 
-            if (isOnline) {
+            if (isOnline && isApiOnline) {
                 console.log('Loading attendees from server...');
                 eventData = await getEventWithAttendeesAPI(event.id);
             } else {
@@ -41,7 +41,7 @@ const AttendanceList = ({ event, onBack, isOnline, refreshTrigger, onAttendanceC
         if (event?.id) {
             loadAttendees();
         }
-    }, [event.id, isOnline, refreshTrigger]);
+    }, [event.id, isOnline, isApiOnline, refreshTrigger]);
 
     // Filtrar asistentes basado en el término de búsqueda
     const filteredAttendees = useMemo(() => {
@@ -148,7 +148,7 @@ const AttendanceList = ({ event, onBack, isOnline, refreshTrigger, onAttendanceC
             <div className="header">
                 <h1>Registro de Asistencia</h1>
                 <h2>{event.name}</h2>
-                {!isOnline && (
+                {(!isOnline || !isApiOnline) && (
                     <div className="offline-notice">
                         Modo offline - Los cambios se sincronizarán cuando vuelvas a estar online
                     </div>

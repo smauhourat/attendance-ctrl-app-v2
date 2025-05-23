@@ -84,23 +84,52 @@ export const saveAttendance = async (attendance) => {
     return tx.done;
 };
 
-// Función mejorada para guardar asistencias desde MongoDB
-// export const saveAttendancesFromMongo = async (attendances) => {
-//     const db = await initDB();
-//     const tx = db.transaction(storeNames.ATTENDANCES, 'readwrite');
-//     const store = tx.objectStore(storeNames.ATTENDANCES);
+// Nueva función para actualizar el estado de asistencia de una persona en un evento
+export const updateEventAttendeeStatus = async (eventId, personId, attended, timestamp) => {
+    const db = await initDB();
+    const tx = db.transaction(storeNames.EVENTS, 'readwrite');
+    const store = tx.objectStore(storeNames.EVENTS);
 
-//     const formattedAttendances = attendances.map(att => ({
-//         eventId: att.event.toString(),
-//         personId: att.person.toString(),
-//         timestamp: att.timestamp,
-//         synced: true
-//     }));
+    try {
+        // Obtener el evento
+        const event = await store.get(eventId);
 
-//     await Promise.all(formattedAttendances.map(att => store.put(att)));
+        if (!event) {
+            console.warn(`Event ${eventId} not found in local DB`);
+            return;
+        }
 
-//     return tx.done;
-// };
+        // Actualizar el asistente específico
+        const updatedAttendees = event.attendees.map(attendee => {
+            // Comparar tanto con _id como con id para mayor compatibilidad
+            const attendeeId = attendee._id?.toString() || attendee.id?.toString();
+            const targetPersonId = personId.toString();
+
+            if (attendeeId === targetPersonId) {
+                return {
+                    ...attendee,
+                    attended,
+                    attendanceTime: timestamp
+                };
+            }
+            return attendee;
+        });
+
+        // Guardar el evento actualizado
+        const updatedEvent = {
+            ...event,
+            attendees: updatedAttendees
+        };
+
+        await store.put(updatedEvent);
+        await tx.done;
+
+        console.log(`Updated attendance for person ${personId} in event ${eventId}`);
+    } catch (error) {
+        console.error('Error updating event attendee status:', error);
+        throw error;
+    }
+};
 
 export const getEventAttendances = async (eventId) => {
     const db = await initDB();
@@ -128,18 +157,4 @@ export const getLocalEventWithAttendees = async (eventId) => {
     if (!event) return null;
 
     return event
-
-    // const attendances = await getEventAttendances(eventId);
-    // // aca ta el kilombo
-    // return {
-    //     ...event,
-    //     attendees: event.attendees.map(attendee => {
-    //         const attendance = attendances.find(a => a.personId === attendee.id);
-    //         return {
-    //             ...attendee,
-    //             attended: !!attendance,
-    //             attendanceTime: attendance?.timestamp
-    //         };
-    //     })
-    // };
 };
