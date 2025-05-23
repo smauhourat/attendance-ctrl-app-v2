@@ -43,6 +43,11 @@ header h1 {
   color: white;
 }
 
+.sync-status.syncing {
+  background-color: #3498db;
+  color: white;
+}
+
 .syncing-notice {
   background-color: #3498db;
   color: white;

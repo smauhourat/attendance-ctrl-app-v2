@@ -96,10 +96,10 @@ function App() {
     <div className="app">
       <header>
         <h1>Control de Asistencia</h1>
-        <SyncStatus isOnline={isOnline && isApiOnline} lastSync={lastSync} />
-        {isSyncing && (
+        <SyncStatus isOnline={isOnline && isApiOnline} lastSync={lastSync} isSyncing={isSyncing} />
+        {/* {isSyncing && (
           <div className="syncing-notice">Sincronizando datos...</div>
-        )}
+        )} */}
       </header>
 
       <main>
