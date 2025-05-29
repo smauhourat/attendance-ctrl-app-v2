@@ -11,16 +11,6 @@ const ASSETS_TO_CACHE = [
   '/logo512.png'
 ];
 
-// self.addEventListener('install', (event) => {
-//   event.waitUntil(
-//     caches.open(CACHE_NAME)
-//       .then((cache) => {
-//         console.log('Opened cache');
-//         return cache.addAll(ASSETS_TO_CACHE);
-//       })
-//   );
-// });
-
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -46,6 +36,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // NO cachear ni responder desde caché para rutas de API
+  if (event.request.url.includes('/api/')) {
+    // Siempre ir a la red para las rutas de API
+    event.respondWith(fetch(event.request));
+    return;
+  }
+    
   event.respondWith(
     caches.match(event.request)
       .then((cachedResponse) => {
@@ -99,18 +96,3 @@ self.addEventListener('activate', (event) => {
       .then(() => self.clients.claim())
   );
 });
-
-// self.addEventListener('activate', (event) => {
-//   const cacheWhitelist = [CACHE_NAME];
-//   event.waitUntil(
-//     caches.keys().then((cacheNames) => {
-//       return Promise.all(
-//         cacheNames.map((cacheName) => {
-//           if (cacheWhitelist.indexOf(cacheName) === -1) {
-//             return caches.delete(cacheName);
-//           }
-//         })
-//       );
-//     })
-//   );
-// });
